@@ -9,8 +9,7 @@ LOADER = loader.bin
 BOOTER = booter.bin
 
 IMPORT_INCLUDE += -I $(TOP)/include
-CFLAGS = -Wall -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes
-# LDFLAGS = -Ttext $(ENTRY_POINT) -e main -Map $(TOP)/kernel.map -m elf_i386
+CFLAGS = -fno-builtin -m32 -c
 LDFLAGS = -m elf_i386 -Ttext 0xc0001500 -e main
 ASFLAGS = -f elf
 ASMKFLAGS = -I boot/include/
@@ -41,7 +40,7 @@ $(TARGET):$(OBJS_C) $(OBJS_ASM)  # 注意这里顺序很重要
 
 .c.o:
 	@echo "compiling $< ==> $@..."
-	$(CC) $(IMPORT_INCLUDE) -m32 -c -o $*.o $*.c
+	$(CC) $(IMPORT_INCLUDE) $(CFLAGS) -o $*.o $*.c
 	@echo
 
 # .asm.o:

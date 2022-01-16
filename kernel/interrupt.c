@@ -18,7 +18,7 @@
 #define PIC_S_CTRL 0xa0     // 从片的控制端口0xa0
 #define PIC_S_DATA 0xa1     // 从片的数据端口0xa0
 
-#define IDT_DESC_CNT 0x21   // 目前总共支持的中断数,33个中断
+#define IDT_DESC_CNT 0x30   // 目前总共支持的中断数,33个中断
 
 #define EFLAGS_IF 0x00000200  // efig寄存器中if位为1
 #define GET_EFLAGS(EFLAG_VAR) asm volatile("pushfl; popl %0" : "=g" (EFLAG_VAR))
@@ -59,7 +59,7 @@ static void pic_init(void)
   outb(PIC_S_DATA, 0x01);   // ICW4: 8086模式, 正常EOI
 
   // 打开主片上IR0,也就是目前只接受时钟产生的中断
-  outb(PIC_M_DATA, 0xfe);     
+  outb(PIC_M_DATA, 0xfd);
   outb(PIC_S_DATA, 0xff);
 
   put_str("  pic_init done.\n");
@@ -94,6 +94,7 @@ static void general_intr_handler(uint8_t vec_nr)
   {
       return;
   }
+
   set_cursor(0);
   int cursor_pos = 0;
 

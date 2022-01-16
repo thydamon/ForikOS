@@ -24,8 +24,8 @@
 // 位图地址为0xc009f000-0x1000*4=0xc009a000
 #define MEM_BITMAP_BASE 0xc009a000
 
-#define PDE_IDX(addr) ((addr & 0xffc00000) >> 22)
-#define PTE_IDX(addr) ((addr & 0x003ff000) >> 12)
+#define PDE_IDX(addr) ((addr & 0xffc00000) >> 22)  // 取得虚拟地址高10位    0xffc00000=1111 1111 1100 0000 0000 0000 0000 0000
+#define PTE_IDX(addr) ((addr & 0x003ff000) >> 12)  // 取得虚拟地址中间10位  0x003ff000=0000 0000 0011 1111 1111 0000 0000 0000
 
 // 在loader中我们通过设置页表把虚拟地址0xc0000000~0xc00fffff映射到物理地址0x00000000~0x000fffff(低端1MB内存)
 // 0xc0000000是内核从虚拟地址3G起. 0x100000意指跨过低端1M内存,使虚拟地址在逻辑上连续
@@ -69,12 +69,14 @@ static void* vaddr_get(enum pool_flags pf, uint32_t pg_cnt)
         // todo 用户内存池
     }
 
-    ;return (void*)vaddr_start;
+    return (void*)vaddr_start;
 }
 
 // 得到虚拟地址vaddr对应的pte指针
 uint32_t* pte_ptr(uint32_t vaddr)
 {
+    // 0xffc00000=1111 1111 1100 0000 0000
+    // 0xffc00000是页目录的最后一项,保存页表的地址
     uint32_t* pte = (uint32_t*)(0xffc00000 + ((vaddr & 0xffc00000) >> 10) + PTE_IDX(vaddr) * 4);
 
     return pte;
@@ -82,6 +84,8 @@ uint32_t* pte_ptr(uint32_t vaddr)
 
 uint32_t* pde_ptr(uint32_t vaddr)
 {
+    // 页目录最后一个地址存放的是页目录的物理地址,即0xfffff000
+    // 页目录项的物理地址+虚拟地址高10位(偏移地址)=页目录项的地址,即页表的物理地址
     uint32_t* pde = (uint32_t*)((0xfffff000) + PDE_IDX(vaddr) * 4);
 
     return pde;
@@ -108,14 +112,15 @@ static void* palloc(struct pool* m_pool)
 static void page_table_add(void* _vaddr, void* _page_phyaddr)
 {
     uint32_t vaddr = (uint32_t)_vaddr;
-    uint32_t page_phyaddr = (int32_t)_page_phyaddr;
+    uint32_t page_phyaddr = (uint32_t)_page_phyaddr;
     uint32_t* pde = pde_ptr(vaddr);
     uint32_t* pte = pte_ptr(vaddr);
 
+    // 判断pte页是否存在
     if (*pde & 0x00000001)
     {
         ASSERT(!(*pte & 0x00000001));
-
+        
         if (!(*pte & 0x00000001))
         {
             *pte = (page_phyaddr | PG_US_U | PG_RW_W | PG_P_1);
@@ -144,8 +149,11 @@ static void page_table_add(void* _vaddr, void* _page_phyaddr)
 
 void* malloc_page(enum pool_flags pf, uint32_t pg_cnt)
 {
+    // 用户空间和内核空间各16M,保险起见15M
+    // pg_cnt<l 5* I024* 1024/4096 = 3840 页 
     ASSERT(pg_cnt > 0 && pg_cnt < 3840);
 
+    // 虚拟内存池申请虚拟地址
     void* vaddr_start = vaddr_get(pf, pg_cnt);
     if (vaddr_start == NULL)
     {
@@ -159,11 +167,14 @@ void* malloc_page(enum pool_flags pf, uint32_t pg_cnt)
 
     while (cnt-- > 0)
     {
+        // 物理内存池申请物理内存
         void* page_phyaddr = palloc(mem_pool);
         if (page_phyaddr == NULL)
         {
             return NULL;
         }
+    
+        // 将虚拟地址与物理地址映射
         page_table_add((void*)vaddr, page_phyaddr);
         vaddr += PG_SIZE;
     }
@@ -171,6 +182,7 @@ void* malloc_page(enum pool_flags pf, uint32_t pg_cnt)
     return vaddr_start;
 }
 
+// 从物理内存池里申请物理内存,成功返回器虚拟地址
 void* get_kernel_pages(uint32_t pg_cnt)
 {
     void* vaddr = malloc_page(PF_KERNEL, pg_cnt); 
@@ -222,11 +234,15 @@ static void mem_pool_init(uint32_t all_mem)
     // 用户内存池的位图紧跟在内核内存池位图之后
     user_pool.pool_bitmap.bits = (void*)(MEM_BITMAP_BASE + kbm_length);
 
-    put_str("      kernel_pool_bitmap_start:");put_int((int)kernel_pool.pool_bitmap.bits);
-    put_str(" kernel_pool_phy_addr_start:");put_int(kernel_pool.phy_addr_start);
+    put_str("      kernel_pool_bitmap_start:");
+    put_int((int)kernel_pool.pool_bitmap.bits);
+    put_str(" kernel_pool_phy_addr_start:");
+    put_int(kernel_pool.phy_addr_start);
     put_str("\n");
-    put_str("      user_pool_bitmap_start:");put_int((int)user_pool.pool_bitmap.bits);
-    put_str(" user_pool_phy_addr_start:");put_int(user_pool.phy_addr_start);
+    put_str("      user_pool_bitmap_start:");
+    put_int((int)user_pool.pool_bitmap.bits);
+    put_str(" user_pool_phy_addr_start:");
+    put_int(user_pool.phy_addr_start);
     put_str("\n");
 
     bitmap_init(&kernel_pool.pool_bitmap);

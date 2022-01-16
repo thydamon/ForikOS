@@ -2,14 +2,14 @@
 section .text
 global switch_to
 switch_to:
-  ; 栈中此处是返回地址
+  ; 栈中此处是返回地址,基于ABI
   push esi
   push edi
   push ebx
   push ebp
 
-  mov eax, [esp + 20]
-  mov [eax], esp
+  mov eax, [esp + 20] ; 找到栈中参数cur,cur = [esp+20]
+  mov [eax], esp ; 保存栈顶指针esp,task_struct的self_kstack字段
 
   mov eax, [esp + 24]
   mov esp, [eax]

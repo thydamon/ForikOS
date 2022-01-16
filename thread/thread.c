@@ -56,7 +56,10 @@ void thread_create(struct task_struct* pthread, thread_func function, void* func
     kthread_stack->eip = kernel_thread;
     kthread_stack->function = function;
     kthread_stack->func_arg = func_arg;
-    kthread_stack->ebp = kthread_stack->ebx = kthread_stack->esi = kthread_stack->edi = 0;
+    kthread_stack->ebp =  0;
+    kthread_stack->ebx = 0;
+    kthread_stack->esi = 0;
+    kthread_stack->edi = 0;
 }
 
 // 初始化线程基本信息
@@ -91,6 +94,7 @@ struct task_struct* thread_start(char* name, int prio, thread_func function, voi
     struct task_struct* thread = get_kernel_pages(1);
 
     init_thread(thread, name, prio);
+    // 初始化线程栈
     thread_create(thread, function, func_arg);
 
     // 确保之前不在队列中 
@@ -142,6 +146,37 @@ void schedule()
     struct task_struct* next = elem2entry(struct task_struct, general_tag, thread_tag);
     next->status = TASK_RUNNING;
     switch_to(cur, next);
+}
+
+// 当前线程将自己阻塞,将状态置为stat
+void thread_block(enum task_status stat)
+{
+    // stat状态为TASK_BLOCKED,TASK_WAITING,TASK_HANGING
+    ASSERT(((stat == TASK_BLOCKED) || (stat == TASK_WAITING) || (stat == TASK_HANGING)));
+    enum intr_status old_status = intr_disable();
+    struct task_struct* cur_thread = running_thread();
+    cur_thread->status = stat;
+    schedule();  // 将当前线程换下处理器
+    // 待当前线程被解除阻塞后才继续运行下面的intr_set_status
+    intr_set_status(old_status);
+}
+
+// 将线程pthread接触阻塞
+void thread_unblock(struct task_struct* pthread)
+{
+    enum intr_status old_status = intr_disable();
+    ASSERT(((pthread->status == TASK_BLOCKED) || (pthread->status == TASK_WAITING) || (pthread->status == TASK_HANGING)));
+    if (pthread->status != TASK_READY)
+    {
+        ASSERT(!elem_find(&thread_ready_list, &pthread->general_tag));
+        if (elem_find(&thread_ready_list, &pthread->general_tag))
+        {
+            PANIC("thread_unblock: blocked thread in ready_list\n");
+        }
+        list_push(&thread_ready_list, &pthread->general_tag);
+        pthread->status = TASK_READY;
+    }
+    intr_set_status(old_status);
 }
 
 // 初始化线程环境

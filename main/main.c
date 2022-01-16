@@ -9,15 +9,32 @@
 #include "kernel/init.h"
 #include "lib/print.h"
 #include "kernel/interrupt.h"
-/*
 #include "thread/thread.h"
+#include "device/console.h"
+
+// 注意main函数之上只能给出函数声明,不能有函数地址
+// 是因为定义了函数会改变函数的入口地址,汇编中函数的入口地址变成了k_thread_a
+void k_thread_a(void *arg);
+void k_thread_b(void *arg);
+
+int main(void)
+{
+    put_str("I am kernel\n");
+    init_all();
+    // thread_start("k_thread_a", 31, k_thread_a, "argA ");
+    // thread_start("k_thread_b", 8, k_thread_b, "argB ");
+    intr_enable(); // 开启中断
+    while(1);
+   	return 0;
+}
 
 void k_thread_a(void* arg)
 {
     char* para = (char*)arg;
     while (1)
     {
-        put_str(para);
+        // put_str(para);
+        console_put_str(para);
     }
 }
 
@@ -26,24 +43,8 @@ void k_thread_b(void* arg)
     char* para = (char*)arg;
     while (1)
     {
-        put_str(para);
+        // put_str(para);
+        console_put_str(para);
     }
-}
-*/
-
-int main(void)
-{
-    put_str("I am kernel\n");
-    init_all();
-    // thread_start("k_thread_a", 31, k_thread_a, "argA ");
-    // thread_start("k_thread_b", 8, k_thread_b, "argB ");
-    // intr_enable();
-    // 使用sti指令才能开启中断,这样中断程序才能运行,
-    // 它将标志位寄存器eflas的IF位置为1,这样来自中断代理8259A的中断信号便可以被处理器受理了
-    // 外部设备都是接在8259A的引脚上,由于在8259A中已经通过IMR寄存器将除时钟之外的所有外部设备
-    // 中断都屏蔽了,这样开启中断后,处理器之后接收时钟中断
-    // asm volatile("sti");
-    while(1);
-   	return 0;
 }
 
