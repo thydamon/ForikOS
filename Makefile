@@ -21,6 +21,7 @@ SRC_PATH += $(TOP)/kernel
 SRC_PATH += $(TOP)/lib
 SRC_PATH += $(TOP)/device
 SRC_PATH += $(TOP)/thread
+SRC_PATH += $(TOP)/user
 
 
 DIRS = $(shell find $(SRC_PATH) -maxdepth 3 -type d)

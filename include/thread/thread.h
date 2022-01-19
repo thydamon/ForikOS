@@ -11,6 +11,8 @@
 
 #include "stdint.h"
 #include "lib/list.h"
+#include "lib/bitmap.h"
+#include "kernel/memory.h"
 
 // 自定义通用函数类型,它将在很多线程函数中做为形参类型
 typedef void thread_func(void*);
@@ -80,8 +82,12 @@ struct task_struct
     struct list_elem general_tag;
     struct list_elem all_list_tag;
     uint32_t* pgdir; 
+    struct virtual_addr user_vaddr;   // 用户进程的虚拟地址
     uint32_t stack_magic;
 };
+
+extern struct list thread_ready_list;
+extern struct list thread_all_list;
 
 void thread_create(struct task_struct* pthread, thread_func function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);
@@ -89,5 +95,7 @@ struct task_struct* thread_start(char* name, int prio, thread_func function, voi
 struct task_struct* running_thread(void);
 void schedule(void);
 void thread_init(void);
+void thread_block(enum task_status stat);
+void thread_unblock(struct task_struct* pthread);
 
 #endif
