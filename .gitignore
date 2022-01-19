@@ -1,0 +1,41 @@
+# Compiled source #
+###################
+*.o
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.classpath
+*.project
+diamond_config_data.log
+diamond_config_data.log.*
+
+
+#ignore these files
+*/.settings/*
+*/bin/*
+*/target/*
+bin/*
+target/*
+**/target/**
+build-target
+# Logs and databases #
+######################
+*.log
+
+# OS generated files #
+######################
+ehthumbs.db
+Thumbs.db
+
+# project
+/plugins

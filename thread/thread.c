@@ -15,6 +15,7 @@
 #include "lib/print.h"
 #include "kernel/memory.h"
 #include "user/process.h"
+#include "thread/sync.h"
 
 // 定义主线程PCB
 struct task_struct* main_thread;
@@ -22,6 +23,7 @@ struct task_struct* main_thread;
 struct list thread_ready_list;
 // 线程全量队列
 struct list thread_all_list;
+struct lock pid_lock;		        // 分配pid锁
 static struct list_elem* thread_tag;
 
 extern void switch_to(struct task_struct* cur, struct task_struct* next);
@@ -43,6 +45,14 @@ static void kernel_thread(thread_func* function, void* func_arg)
     function(func_arg);
 }
 
+// 分配pid
+static pid_t allocate_pid(void) {
+   static pid_t next_pid = 0;
+   lock_acquire(&pid_lock);
+   next_pid++;
+   lock_release(&pid_lock);
+   return next_pid;
+}
 // 初始化线程栈thread_stack,将待执行的函数和参数放到thread_stack中相应的位置
 void thread_create(struct task_struct* pthread, thread_func function, void* func_arg)
 {
@@ -65,7 +75,7 @@ void thread_create(struct task_struct* pthread, thread_func function, void* func
 void init_thread(struct task_struct* pthread, char* name, int prio)
 {
     memset(pthread, 0, sizeof(*pthread));
-
+    pthread->pid = allocate_pid();
     strcpy(pthread->name, name);
 
     if (pthread == main_thread)
@@ -188,6 +198,7 @@ void thread_init(void)
     put_str("thread_init start\n");
     list_init(&thread_ready_list);
     list_init(&thread_all_list);
+    lock_init(&pid_lock);
     // 将当前main函数创建为线程
     make_main_thread();
     put_str("thread_init done\n");

@@ -16,6 +16,7 @@
 
 // 自定义通用函数类型,它将在很多线程函数中做为形参类型
 typedef void thread_func(void*);
+typedef int16_t pid_t;
 
 enum task_status
 {
@@ -64,6 +65,7 @@ struct thread_stack
     // 线程第一次执行时,eip指向待调用的函数kernel_thread
     // 其它时候,eip是指向switch_to的返回地址
     void (*eip) (thread_func* func, void* func_arg);
+    // 占位函数返回地址
     void (*unused_retaddr);
     thread_func* function;
     void* func_arg;
@@ -73,6 +75,7 @@ struct thread_stack
 struct task_struct
 {
     uint32_t* self_kstack;    // 各内核线程都用自己的内核栈
+    pid_t pid;
     enum task_status status;
     char name[16];
     uint8_t priority;
