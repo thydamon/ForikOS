@@ -11,6 +11,7 @@
 
 #include "lib/stdint.h"
 #include "lib/bitmap.h"
+#include "lib/list.h"
 
 // 内存池标记,用于判断用哪个内存池
 enum pool_flags
@@ -29,11 +30,27 @@ enum pool_flags
 // 用于虚拟地址管理
 struct virtual_addr
 {
-  // 虚拟地址用到的位图结构，用于记录哪些虚拟地址被占用了。以页为单位
-  struct bitmap vaddr_bitmap;
-  // 管理的虚拟地址
-  uint32_t vaddr_start;
+    // 虚拟地址用到的位图结构，用于记录哪些虚拟地址被占用了。以页为单位
+    struct bitmap vaddr_bitmap;
+    // 管理的虚拟地址
+    uint32_t vaddr_start;
 };
+
+// 内存块
+struct mem_block
+{
+    struct list_elem free_elem;
+};
+
+// 内存块描述符
+struct mem_block_desc
+{
+    uint32_t block_size;      // 内存块大小
+    uint32_t blocks_per_arena;    // 本arena中可容纳此mem_block的数量
+    struct list free_list;    // 目前可用的mem_block链表
+};
+
+#define DESC_CNT 7     // 内存块描述符个数
 
 extern struct pool kernel_pool, user_pool;
 void mem_init(void);
@@ -45,5 +62,10 @@ uint32_t* pde_ptr(uint32_t vaddr);
 uint32_t addr_v2p(uint32_t vaddr);
 void* get_a_page(enum pool_flags pf, uint32_t vaddr);
 void* get_user_pages(uint32_t pg_cnt);
+void block_desc_init(struct mem_block_desc* desc_array);
+void* sys_malloc(uint32_t size);
+void mfree_page(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt);
+void pfree(uint32_t pg_phy_addr);
+void sys_free(void* ptr);
 
 #endif

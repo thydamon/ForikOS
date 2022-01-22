@@ -27,4 +27,5 @@ void panic_spin(char* filename, int line, const char* func, const char* conditio
     put_str("condition:");
     put_str((char*)condition);
     put_str("\n");
+	while(1);
 }

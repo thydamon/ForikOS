@@ -12,7 +12,7 @@
 #include "stdint.h"
 #include "lib/list.h"
 #include "lib/bitmap.h"
-#include "kernel/memory.h"
+#include "mm/memory.h"
 
 // 自定义通用函数类型,它将在很多线程函数中做为形参类型
 typedef void thread_func(void*);
@@ -54,9 +54,14 @@ struct intr_stack
     uint32_t ss;
 };
 
-// 线程栈thread_stack
+// 线程栈thread_stack,用于存储线程中待执行的函数
+// 此结构在线程自己的内核栈中位置不固定
+// 仅用在switch_to是保存线程环境,实际位置取决于实际运行情况
 struct thread_stack
 {
+    // 应用程序二进制接口ABI
+    // 规定参数如何传递，返回值如何存储，系统调用的实现方式，目标文件格式或数据类型等
+    // switch_to函数切换时,先在线程栈thread_stack中压入这4个寄存器
     uint32_t ebp;
     uint32_t ebx;
     uint32_t edi;
@@ -86,6 +91,7 @@ struct task_struct
     struct list_elem all_list_tag;
     uint32_t* pgdir; 
     struct virtual_addr user_vaddr;   // 用户进程的虚拟地址
+    struct mem_block_desc u_block_desc[DESC_CNT];   // 用户进程内存块描述符
     uint32_t stack_magic;
 };
 

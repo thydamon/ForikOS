@@ -9,7 +9,7 @@
 #include "user/process.h"
 #include "global.h"
 #include "lib/debug.h"
-#include "kernel/memory.h"
+#include "mm/memory.h"
 #include "thread/thread.h"
 #include "lib/list.h"
 #include "user/tss.h"
@@ -103,6 +103,7 @@ void process_execute(void* filename, char* name)
     create_user_vaddr_bitmap(thread);
     thread_create(thread, start_process, filename);
     thread->pgdir = create_page_dir();
+    block_desc_init(thread->u_block_desc);
 
     enum intr_status old_status = intr_disable();
     ASSERT(!elem_find(&thread_ready_list, &thread->general_tag));

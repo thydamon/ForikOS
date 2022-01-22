@@ -12,9 +12,10 @@
 #include "device/timer.h"
 #include "device/console.h"
 #include "thread/thread.h"
-#include "kernel/memory.h"
+#include "mm/memory.h"
 #include "device/keyboard.h"
 #include "user/tss.h"
+#include "user/syscall_init.h"
 
 void init_all()
 {

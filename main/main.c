@@ -14,6 +14,8 @@
 #include "user/process.h"
 #include "user/syscall.h"
 #include "user/syscall_init.h"
+#include "lib/stdio.h"
+#include "mm/memory.h"
 
 // 注意main函数之上只能给出函数声明,不能有函数地址
 // 是因为定义了函数会改变函数的入口地址,汇编中函数的入口地址变成了k_thread_a
@@ -21,63 +23,93 @@ void k_thread_a(void*);
 void k_thread_b(void*);
 void u_prog_a(void);
 void u_prog_b(void);
-int test_var_a = 0;
-int test_var_b = 0;
-int prog_a_pid = 0;
-int prog_b_pid = 0;
 
 
 int main(void) {
    put_str("I am kernel\n");
    init_all();
-
-   process_execute(u_prog_a, "user_prog_a");
-   process_execute(u_prog_b, "user_prog_b");
-
    intr_enable();
-   console_put_str(" main_pid:0x");
-   console_put_int(sys_getpid());
-   console_put_char('\n');
-   thread_start("k_thread_a", 31, k_thread_a, "argA ");
-   thread_start("k_thread_b", 31, k_thread_b, "argB ");
+   process_execute(u_prog_a, "u_prog_a");
+   process_execute(u_prog_b, "u_prog_b");
+   thread_start("k_thread_a", 31, k_thread_a, "I am thread_a");
+   thread_start("k_thread_b", 31, k_thread_b, "I am thread_b");
    while(1);
    return 0;
 }
 
 /* 在线程中运行的函数 */
-void k_thread_a(void* arg) {     
-   char* para = arg;
-   console_put_str(" thread_a_pid:0x");
-   console_put_int(sys_getpid());
+void k_thread_a(void* arg) 
+{     
+   void* addr1 = sys_malloc(256);
+   void* addr2 = sys_malloc(255);
+   void* addr3 = sys_malloc(254);
+   console_put_str(" thread_a malloc addr:0x");
+   console_put_int((int)addr1);
+   console_put_char(',');
+   console_put_int((int)addr2);
+   console_put_char(',');
+   console_put_int((int)addr3);
    console_put_char('\n');
-   console_put_str(" prog_a_pid:0x");
-   console_put_int(prog_a_pid);
-   console_put_char('\n');
+
+   int cpu_delay = 100000;
+   while(cpu_delay-- > 0);
+   sys_free(addr1);
+   sys_free(addr2);
+   sys_free(addr3);
    while(1); 
 }
 
 /* 在线程中运行的函数 */
-void k_thread_b(void* arg) {     
-   char* para = arg;
-   console_put_str(" thread_b_pid:0x");
-   console_put_int(sys_getpid());
+void k_thread_b(void* arg) 
+{     
+   void* addr1 = sys_malloc(256);
+   void* addr2 = sys_malloc(255);
+   void* addr3 = sys_malloc(254);
+   console_put_str(" thread_b malloc addr:0x");
+   console_put_int((int)addr1);
+   console_put_char(',');
+   console_put_int((int)addr2);
+   console_put_char(',');
+   console_put_int((int)addr3);
    console_put_char('\n');
-   console_put_str(" prog_b_pid:0x");
-   console_put_int(prog_b_pid);
-   console_put_char('\n');
+
+   int cpu_delay = 100000;
+   while(cpu_delay-- > 0);
+   sys_free(addr1);
+   sys_free(addr2);
+   sys_free(addr3);
    while(1); 
 }
 
 /* 测试用户进程 */
 void u_prog_a(void) 
 {
-    prog_a_pid = getpid();
+   void* addr1 = malloc(256);
+   void* addr2 = malloc(255);
+   void* addr3 = malloc(254);
+   printf(" prog_a malloc addr:0x%x,0x%x,0x%x\n", (int)addr1, (int)addr2, (int)addr3);
+
+   int cpu_delay = 100000;
+
+   while(cpu_delay-- > 0);
+   free(addr1);
+   free(addr2);
+   free(addr3);
     while(1);
 }
 
 /* 测试用户进程 */
 void u_prog_b(void) 
 {
-    prog_b_pid = getpid();
+   void* addr1 = malloc(256);
+   void* addr2 = malloc(255);
+   void* addr3 = malloc(254);
+   printf(" prog_b malloc addr:0x%x,0x%x,0x%x\n", (int)addr1, (int)addr2, (int)addr3);
+
+   int cpu_delay = 100000;
+   while(cpu_delay-- > 0);
+   free(addr1);
+   free(addr2);
+   free(addr3);
     while(1); 
 }

@@ -13,9 +13,10 @@
 #include "lib/debug.h"
 #include "kernel/interrupt.h"
 #include "lib/print.h"
-#include "kernel/memory.h"
+#include "mm/memory.h"
 #include "user/process.h"
 #include "thread/sync.h"
+#include "device/console.h"
 
 // 定义主线程PCB
 struct task_struct* main_thread;
