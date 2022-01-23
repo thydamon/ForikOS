@@ -16,6 +16,7 @@
 #include "device/keyboard.h"
 #include "user/tss.h"
 #include "user/syscall_init.h"
+#include "device/ide.h"
 
 void init_all()
 {
@@ -28,5 +29,6 @@ void init_all()
     keyboard_init();  // 键盘初始化
     tss_init();       // tss初始化
     syscall_init();   // 初始化系统调用
+    ide_init();       // 初始化硬盘
 }
 
