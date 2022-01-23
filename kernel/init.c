@@ -17,6 +17,7 @@
 #include "user/tss.h"
 #include "user/syscall_init.h"
 #include "device/ide.h"
+#include "fs/fs.h"
 
 void init_all()
 {
@@ -30,5 +31,6 @@ void init_all()
     tss_init();       // tss初始化
     syscall_init();   // 初始化系统调用
     ide_init();       // 初始化硬盘
+    filesys_init();   // 初始化文件系统
 }
 

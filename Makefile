@@ -23,6 +23,7 @@ SRC_PATH += $(TOP)/device
 SRC_PATH += $(TOP)/thread
 SRC_PATH += $(TOP)/user
 SRC_PATH += $(TOP)/mm
+SRC_PATH += $(TOP)/fs
 
 
 DIRS = $(shell find $(SRC_PATH) -maxdepth 3 -type d)
