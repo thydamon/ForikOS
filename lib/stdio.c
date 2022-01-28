@@ -112,6 +112,6 @@ uint32_t printf(const char* format, ...)
     vsprintf(buf, format, args);
     va_end(args);
 
-    return write(buf);
+   return write(1, buf, strlen(buf)); 
 }
 

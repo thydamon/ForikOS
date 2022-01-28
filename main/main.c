@@ -16,6 +16,8 @@
 #include "user/syscall_init.h"
 #include "lib/stdio.h"
 #include "mm/memory.h"
+#include "fs/dir.h"
+#include "fs/fs.h"
 
 // 注意main函数之上只能给出函数声明,不能有函数地址
 // 是因为定义了函数会改变函数的入口地址,汇编中函数的入口地址变成了k_thread_a
@@ -25,14 +27,21 @@ void u_prog_a(void);
 void u_prog_b(void);
 
 
-int main(void) {
+int main(void) 
+{
    put_str("I am kernel\n");
    init_all();
-   intr_enable();
-   process_execute(u_prog_a, "u_prog_a");
-   process_execute(u_prog_b, "u_prog_b");
-   thread_start("k_thread_a", 31, k_thread_a, "I am thread_a");
-   thread_start("k_thread_b", 31, k_thread_b, "I am thread_b");
+/********  测试代码  ********/
+   struct stat obj_stat;
+   sys_stat("/", &obj_stat);
+   printf("/`s info\n   i_no:%d\n   size:%d\n   filetype:%s\n", \
+	 obj_stat.st_ino, obj_stat.st_size, \
+	 obj_stat.st_filetype == 2 ? "directory" : "regular");
+   sys_stat("/dir1", &obj_stat);
+   printf("/dir1`s info\n   i_no:%d\n   size:%d\n   filetype:%s\n", \
+	 obj_stat.st_ino, obj_stat.st_size, \
+	 obj_stat.st_filetype == 2 ? "directory" : "regular");
+/********  测试代码  ********/
    while(1);
    return 0;
 }
