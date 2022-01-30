@@ -15,6 +15,7 @@
 #include "lib/string.h"
 #include "mm/memory.h"
 #include "fs/fs.h"
+#include "user/fork.h"
 
 #define syscall_nr 32
 typedef void* syscall;
@@ -34,5 +35,6 @@ void syscall_init()
     syscall_table[SYS_WRITE] = sys_write;
     syscall_table[SYS_MALLOC] = sys_malloc;
     syscall_table[SYS_FREE] = sys_free;
+    syscall_table[SYS_FORK]   = sys_fork;
     put_str("syscall_init done\n");
 }
