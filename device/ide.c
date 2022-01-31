@@ -20,7 +20,7 @@
 
 // 定义硬盘各寄存器的端口号
 #define reg_data(channel)        (channel->port_base + 0)
-#define reg_error(channel)       (channel->port_base + 1).
+#define reg_error(channel)       (channel->port_base + 1)
 #define reg_sect_cnt(channel)    (channel->port_base + 2)
 #define reg_lba_l(channel)       (channel->port_base + 3)
 #define reg_lba_m(channel)       (channel->port_base + 4)
@@ -442,6 +442,7 @@ void ide_init()
     // 低端1MB以内的虚拟地址和物理地址相同,所以虚拟地址0x475可以正确访问到物理地址0x475
     uint8_t hd_cnt = *((uint8_t*)(0x475));         // 获取硬盘的数量
     ASSERT(hd_cnt > 0);
+    list_init(&partition_list);
     channel_cnt = DIV_ROUND_UP(hd_cnt, 2);      // 一个ide通道上有两个硬盘,根据硬盘数量反推有几个ide通道
     struct ide_channel* channel;
     uint8_t channel_no = 0;
@@ -497,6 +498,8 @@ void ide_init()
         channel_no++;                // 下一个channel
     }
 
+    printk("\n   all partition info\n");
+    list_traversal(&partition_list, partition_info, (int)NULL);
     printk("ide_init done\n");
 
 }

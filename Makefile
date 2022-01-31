@@ -24,6 +24,7 @@ SRC_PATH += $(TOP)/thread
 SRC_PATH += $(TOP)/user
 SRC_PATH += $(TOP)/mm
 SRC_PATH += $(TOP)/fs
+SRC_PATH += $(TOP)/shell
 
 
 DIRS = $(shell find $(SRC_PATH) -maxdepth 3 -type d)

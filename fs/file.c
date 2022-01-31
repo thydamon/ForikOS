@@ -241,7 +241,7 @@ int32_t file_open(uint32_t inode_no, uint8_t flag)
     file_table[fd_idx].fd_flag = flag;
     bool* write_deny = &file_table[fd_idx].fd_inode->write_deny;
 
-    if (flag & O_WRONLY || flag & O_RDWR)  // 只要是关于写文件,判断是否有其它进程正写此文件,若是读文件或创建文件,不用理会write_deny,保持默认
+   if (flag == O_WRONLY || flag == O_RDWR) 	// 只要是关于写文件,判断是否有其它进程正写此文件
     {
         // 若是读文件,不考虑write_deny,以下进入临界区前先关中断
         enum intr_status old_status = intr_disable();

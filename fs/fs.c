@@ -20,6 +20,8 @@
 #include "mm/memory.h"
 #include "fs/file.h"
 #include "device/console.h"
+#include "device/keyboard.h"
+#include "device/ioqueue.h"
 
 struct partition* cur_part;  // 默认情况下操作的是哪个分区
 
@@ -198,7 +200,7 @@ static void partition_format(struct partition* part)
 
 
 // 将最上层路径名称解析出来
-static char* path_parse(char* pathname, char* name_store)
+char* path_parse(char* pathname, char* name_store)
 {
     if (pathname[0] == '/')  // 根目录不需要单独解析
     {
@@ -451,16 +453,32 @@ int32_t sys_write(int32_t fd, const void* buf, uint32_t count)
 // 从文件描述符fd指向的文件中读取count个字节到buf,若成功则返回读出的字节数,到文件尾则返回-1
 int32_t sys_read(int32_t fd, void* buf, uint32_t count)
 {
-    if (fd < 0)
-    {
-        printk("sys_read: fd error\n");
-        return -1;
-    }
-
     ASSERT(buf != NULL);
-    uint32_t _fd = fd_local2global(fd);
-
-    return file_read(&file_table[_fd], buf, count);
+    int32_t ret = -1;
+    if (fd < 0 || fd == stdout_no || fd == stderr_no) 
+	{
+    	printk("sys_read: fd error\n");
+   	} 
+	else if (fd == stdin_no) 
+	{
+    	char* buffer = buf;
+      	uint32_t bytes_read = 0;
+      	while (bytes_read < count) 
+		{
+	 		*buffer = ioq_getchar(&kbd_buf);
+	 		bytes_read++;
+	 		buffer++;
+    	}
+    
+		ret = (bytes_read == 0 ? -1 : (int32_t)bytes_read);
+   	} 
+	else 
+	{
+      	uint32_t _fd = fd_local2global(fd);
+      	ret = file_read(&file_table[_fd], buf, count);   
+   	}
+	
+	return ret;
 }
 // 重置用于文件读写操作的偏移指针,成功时返回新的偏移量,出错时返回-1
 int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence)
@@ -772,44 +790,6 @@ void sys_rewinddir(struct dir* dir)
     dir->dir_pos = 0;
 }
 
-// 判断目录是否为空
-bool dir_is_empty(struct dir* dir)
-{
-    struct inode* dir_inode = dir->inode;
-    // 若目录下只有.和..这两个目录项则目录为空
-    return (dir_inode->i_size == cur_part->sb->dir_entry_size * 2);
-}
-
-// 在父目录parent_dir中删除child_dir
-int32_t dir_remove(struct dir* parent_dir, struct dir* child_dir)
-{
-    struct inode* child_dir_inode  = child_dir->inode;
-
-    // 空目录只在inode->i_sectors[0]中有扇区,其它扇区都应该为空
-    int32_t block_idx = 1;
-    while (block_idx < 13)
-    {
-        ASSERT(child_dir_inode->i_sectors[block_idx] == 0);
-        block_idx++;
-    }
-
-    void* io_buf = sys_malloc(SECTOR_SIZE * 2);
-    if (io_buf == NULL)
-    {
-        printk("dir_remove: malloc for io_buf failed\n");
-        block_idx++;
-    }
-
-    // 在父目录parent_dir中删除子目录child_dir对应的目录项
-    delete_dir_entry(cur_part, parent_dir, child_dir_inode->i_no, io_buf);
-
-    // 回收inode中i_secotrs中所占用的扇区,并同步inode_bitmap和block_bitmap 
-    inode_release(cur_part, child_dir_inode->i_no);
-    sys_free(io_buf);
-
-    return 0;
-}
-
 // 删除空目录,成功时返回0,失败时返回-1
 int32_t sys_rmdir(const char* pathname)
 {
@@ -1046,6 +1026,12 @@ int32_t sys_stat(const char* path, struct stat* buf)
     dir_close(searched_record.parent_dir);
 
     return ret;
+}
+
+// 向屏幕输出一个字符
+void sys_putchar(char char_asci)
+{
+    console_put_char(char_asci);
 }
  
 void filesys_init()
