@@ -235,6 +235,7 @@ void* get_user_pages(uint32_t pg_cnt)
 }
 
 // 将地址vaddr与pf池中的物理地址关联,仅支持一页空间分配
+// 与get_kernel_pages和get_user_pages不同的是这里可以指定虚拟地址和自动分配虚拟地址
 void* get_a_page(enum pool_flags pf, uint32_t vaddr)
 {
     struct pool* mem_pool = pf & PF_KERNEL ? &kernel_pool : &user_pool;
@@ -248,7 +249,7 @@ void* get_a_page(enum pool_flags pf, uint32_t vaddr)
     if (cur->pgdir != NULL && pf == PF_USER)
     {
         bit_idx = (vaddr - cur->user_vaddr.vaddr_start) / PG_SIZE;
-        ASSERT(bit_idx > 0);
+        ASSERT(bit_idx >= 0);
         bitmap_set(&cur->user_vaddr.vaddr_bitmap, bit_idx, 1);
     }
     else if (cur->pgdir == NULL && pf == PF_KERNEL)
@@ -608,7 +609,7 @@ void sys_free(void* ptr)
 // 初始化内存池
 static void mem_pool_init(uint32_t all_mem)
 {
-    put_str("    mem_pool_init start\n");
+    put_str("mem_pool_init start...\n");
     // page_table_size = 页目录表大小+页表大小
     // 页表大小为1
     // 第一个和第768个页目录项指向同一个页表,769~1022个页目录项指向254个页表,总计255个页框
@@ -644,14 +645,16 @@ static void mem_pool_init(uint32_t all_mem)
     // 用户内存池的位图紧跟在内核内存池位图之后
     user_pool.pool_bitmap.bits = (void*)(MEM_BITMAP_BASE + kbm_length);
 
-    put_str("      kernel_pool_bitmap_start:");
+    put_str("kernel pool bitmap start:");
     put_int((int)kernel_pool.pool_bitmap.bits);
-    put_str(" kernel_pool_phy_addr_start:");
+    put_str("\n");
+    put_str("kernel pool phy addr start:");
     put_int(kernel_pool.phy_addr_start);
     put_str("\n");
-    put_str("      user_pool_bitmap_start:");
+    put_str("user pool bitmap start:");
     put_int((int)user_pool.pool_bitmap.bits);
-    put_str(" user_pool_phy_addr_start:");
+    put_str("\n");
+    put_str("user pool phy addr start:");
     put_int(user_pool.phy_addr_start);
     put_str("\n");
 
@@ -667,7 +670,7 @@ static void mem_pool_init(uint32_t all_mem)
     kernel_vaddr.vaddr_bitmap.bits = (void*)(MEM_BITMAP_BASE + kbm_length + ubm_length);
     kernel_vaddr.vaddr_start = K_HEAP_START;
     bitmap_init(&kernel_vaddr.vaddr_bitmap);
-    put_str("   mem_pool_init done\n");
+    put_str("mem pool init done.\n");
 }
 
 // 为malloc做准备
@@ -688,16 +691,33 @@ void block_desc_init(struct mem_block_desc* desc_array)
     }
 }
 
-
+// 根据物理页框地址pg_phy_addr在相应的内存池的位图清0,不改动页表
+void free_a_phy_page(uint32_t pg_phy_addr) 
+{
+   struct pool* mem_pool;
+   uint32_t bit_idx = 0;
+   if (pg_phy_addr >= user_pool.phy_addr_start) 
+   {
+      mem_pool = &user_pool;
+      bit_idx = (pg_phy_addr - user_pool.phy_addr_start) / PG_SIZE;
+   } 
+   else 
+   {
+      mem_pool = &kernel_pool;
+      bit_idx = (pg_phy_addr - kernel_pool.phy_addr_start) / PG_SIZE;
+   }
+   
+   bitmap_set(&mem_pool->pool_bitmap, bit_idx, 0);
+}
 
 // 内存管理部分初始化入口
 void mem_init()
 {
-    put_str("mem_init start\n");
+    put_str("mem_init start...\n");
     // mem_bytes_total为loader.asm中获取到的内存容量的保存地址,其值为0xb00
     // total_mem_bytes是32位的,所以先将0xb00转换成uint_t*型,然后用*取值
     uint32_t mem_bytes_total = (*(uint32_t*)(0xb00));
     mem_pool_init(mem_bytes_total);    // 初始化内存池
     block_desc_init(k_block_descs);    // 初始化mem_block_desc数组descs,为malloc做准备
-    put_str("mem_init done\n");
+    put_str("mem_init done...\n");
 }

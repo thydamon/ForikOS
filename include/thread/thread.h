@@ -14,6 +14,7 @@
 #include "lib/bitmap.h"
 #include "mm/memory.h"
 
+#define TASK_NAME_LEN 16
 #define MAX_FILES_OPEN_PER_PROC 8
 
 // 自定义通用函数类型,它将在很多线程函数中做为形参类型
@@ -84,7 +85,7 @@ struct task_struct
     uint32_t* self_kstack;    // 各内核线程都用自己的内核栈
     pid_t pid;
     enum task_status status;
-    char name[16];
+    char name[TASK_NAME_LEN];
     uint8_t priority;
     uint8_t ticks;      // 每次在处理器上执行的时间嘀嗒数
 
@@ -98,7 +99,8 @@ struct task_struct
     struct mem_block_desc u_block_desc[DESC_CNT];   // 用户进程内存块描述符
     int32_t fd_table[MAX_FILES_OPEN_PER_PROC];   // 文件描述符数组
     uint32_t cwd_inode_nr;    // 进程所在的工作目录的inode编号
-    int16_t parent_pid;       // 父进程pid
+    pid_t parent_pid;		 // 父进程pid
+    int8_t  exit_status;         // 进程结束时自己调用exit传入的参数
     uint32_t stack_magic;
 };
 
@@ -116,5 +118,8 @@ void thread_unblock(struct task_struct* pthread);
 void thread_yield(void);
 pid_t fork_pid(void);
 void sys_ps(void);
+void thread_exit(struct task_struct* thread_over, bool need_schedule);
+struct task_struct* pid2thread(int32_t pid);
+void release_pid(pid_t pid);
 
 #endif

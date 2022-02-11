@@ -247,22 +247,27 @@ mem_cpy:
 
 
 ;-------------   创建页目录及页表   ---------------
+; 第0个页目录和第768个页目录都指向物理地址低1M,
+; 第768~1022指向物理地址低1M的地址空间映射到虚拟地址高1G
 setup_page:
 ;先把页目录占用的空间逐字节清0
    mov ecx, 4096
    mov esi, 0
 .clear_page_dir:
-   mov byte [PAGE_DIR_TABLE_POS + esi], 0
-   inc esi
+   mov byte [PAGE_DIR_TABLE_POS + esi], 0   ; PAGE_DIR_TABLE_POS为0x100000为1MB
+   inc esi                                  ; 以PAGE_DIR_TABLE_POS为基址,esi为变址,每次自增1,逐步完成4096(4kb)的清理
    loop .clear_page_dir
 
 ;开始创建页目录项(PDE),只设置第1,768,1024个PDE
 .create_pde:				     ; 创建Page Directory Entry
    mov eax, PAGE_DIR_TABLE_POS   ; 页目录的地址0x100000
    add eax, 0x1000 			     ; 此时eax为第一个页表的位置及属性,页目录项有1024个,每个页表项4字节,页目录总计4096=0x1000位
-   mov ebx, eax				     ; 此处为ebx赋值,是为.create_pte做准备,ebx为基址。0x101000为二级页表地址
+   mov ebx, eax				     ; 此处为ebx赋值,是为.create_pte做准备,ebx为基址。0x101000为二级页表基地址,即页表地址
 
-;   下面将页目录项0和0xc00都存为第一个页表的地址，
+;下面将页目录项0和0xc00都存为第一个页表的地址即0x101000
+;1) 内核加载之前程序一直是运行在1MB之内的,为了保证分段机制和分页机制下虚拟地址对应的物理地址一直,
+;   所以用第0项指向0~0x3fffff,包括了1MB(0~0xfffff)来保证loader在分页机制下仍然正常运行
+;2) 为了将操作系统1M物理内存空间映射到3GB以上的虚拟地址
 ;   一个页表可表示4MB内存,这样0xc03fffff以下的地址和0x003fffff以下的地址都指向相同的页表，
 ;   这是为将地址映射为内核地址做准备
    or eax, PG_US_U | PG_RW_W | PG_P	         ; 页目录项的属性RW和P位为1,US为1,表示用户属性,所有特权级别都可以访问.
@@ -270,24 +275,28 @@ setup_page:
    mov [PAGE_DIR_TABLE_POS + 0xc00], eax     ; 一个页表项占用4字节,0xc00表示第768个页表占用的目录项,0xc00以上的目录项用于内核空间,
 					                         ; 也就是页表的0xc0000000~0xffffffff共计1G属于内核,0x0~0xbfffffff共计3G属于用户进程.
    sub eax, 0x1000
+   ; 页目录大小为4096,每个页目录项占4个字节,4096-4=4092为最后一个页目录项起始地址
    mov [PAGE_DIR_TABLE_POS + 4092], eax	     ; 使最后一个目录项指向页目录表自己的地址
 
 ;下面创建页表项(PTE)
-   mov ecx, 256				                 ; 1M低端内存 / 每页大小4k = 256
+   ; 低1M需要256个页表项
+   mov ecx, 256				                 ; 1M低端内存 / 每页大小4k = 256个页表项
    mov esi, 0
    mov edx, PG_US_U | PG_RW_W | PG_P	     ; 属性为7,US=1,RW=1,P=1
 .create_pte:				                 ; 创建Page Table Entry
+   ; 此时的ebx已经在上面通过eax赋值为0x101000,也就是第一个页表的地址
    mov [ebx+esi*4],edx			             ; 此时的ebx已经在上面通过eax赋值为0x101000,也就是第一个页表的地址 
+   ; 每个页表4kb=4096
    add edx,4096                              ; 第一个页表项中偏移地址为0,第二个位4096,依次类推,所以这里每次循环加4096
    inc esi
    loop .create_pte
 
-;创建内核其它页表的PDE
+;创建内核其它页目录的PDE
    mov eax, PAGE_DIR_TABLE_POS
-   add eax, 0x2000 		                     ; 此时eax为第二个页表的位置,第一个页表位置为0x1000,第二个页表位置为0x2000
+   add eax, 0x2000 		                     ; 此时eax为第二个页表的位置,第一个页表位置为0x1000(1024,因为前1024是页目录的地址,页目录和页表是依次连续存放的),第二个页表位置为0x2000
    or eax, PG_US_U | PG_RW_W | PG_P          ; 页目录项的属性RW和P位为1,US为0
    mov ebx, PAGE_DIR_TABLE_POS
-   mov ecx, 254			                     ; 范围为第769~1022的所有目录项数量
+   mov ecx, 254			                     ; 范围为第769~1022的所有目录项数量,1023个页目录指向自身
    mov esi, 769
 .create_kernel_pde:
    mov [ebx+esi*4], eax
